@@ -13,7 +13,7 @@ import {
   serviceVisits,
   opportunities,
   quoteLines,
-  activities,
+  recentActivity as activities,
   notifications,
 } from "@/lib/mock-data"
 
