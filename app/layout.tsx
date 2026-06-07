@@ -1,8 +1,11 @@
 import type { Metadata, Viewport } from "next"
 import { Plus_Jakarta_Sans, Inter } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import { ClerkProvider } from "@clerk/nextjs"
 import { ThemeProvider } from "@/components/theme-provider"
 import "./globals.css"
+
+const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY)
 
 const heading = Plus_Jakarta_Sans({
   variable: "--font-heading",
@@ -58,7 +61,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          {clerkEnabled ? <ClerkProvider>{children}</ClerkProvider> : children}
         </ThemeProvider>
         {process.env.NODE_ENV === "production" && <Analytics />}
       </body>

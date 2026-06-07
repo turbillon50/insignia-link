@@ -4,22 +4,42 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { StatCard } from "@/components/admin/stat-card"
 import { PriorityDonut } from "@/components/admin/charts"
-import {
-  dashboardKpis,
-  priorityBreakdown,
-  recentActivity,
-  technicians,
-  formatCurrency,
-} from "@/lib/mock-data"
+import { formatCurrency } from "@/lib/mock-data"
+import { getDashboardKpis, getTechnicians, getTickets, getNotifications } from "@/lib/data"
+
+export const dynamic = "force-dynamic"
 
 const activityIcon = {
   ticket: Ticket,
-  mantenimiento: Wrench,
-  cotizacion: FileText,
   servicio: Cctv,
-}
+  cotizacion: FileText,
+  sistema: Wrench,
+} as const
 
-export default function AdminDashboard() {
+export default async function AdminDashboard() {
+  const [kpis, technicians, tickets, notifs] = await Promise.all([
+    getDashboardKpis(),
+    getTechnicians(),
+    getTickets(),
+    getNotifications(),
+  ])
+
+  // Prioridad real a partir de los tickets en Neon.
+  const total = tickets.length || 1
+  const counts = { Alta: 0, Media: 0, Baja: 0 } as Record<string, number>
+  for (const t of tickets) {
+    if (t.priority === "alta") counts.Alta++
+    else if (t.priority === "media") counts.Media++
+    else counts.Baja++
+  }
+  const colors: Record<string, string> = { Alta: "var(--chart-4)", Media: "var(--chart-3)", Baja: "var(--chart-2)" }
+  const priorityBreakdown = (["Alta", "Media", "Baja"] as const).map((name) => ({
+    name,
+    value: counts[name],
+    percent: Math.round((counts[name] / total) * 100),
+    color: colors[name],
+  }))
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -32,16 +52,15 @@ export default function AdminDashboard() {
         </Button>
       </div>
 
-      {/* KPIs */}
+      {/* KPIs reales */}
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Tickets abiertos" value={dashboardKpis.openTickets} trend={dashboardKpis.openTicketsTrend} icon={Ticket} />
-        <StatCard label="Técnicos activos" value={dashboardKpis.activeTechnicians} icon={Users} />
-        <StatCard label="Contratos vigentes" value={dashboardKpis.activeContracts} trend={dashboardKpis.activeContractsTrend} icon={FileSignature} />
-        <StatCard label="Ventas del mes" value={formatCurrency(dashboardKpis.monthSales)} trend={dashboardKpis.monthSalesTrend} icon={DollarSign} />
+        <StatCard label="Tickets abiertos" value={kpis.openTickets + kpis.inProgressTickets} icon={Ticket} />
+        <StatCard label="Técnicos activos" value={kpis.technicians} icon={Users} />
+        <StatCard label="Clientes activos" value={kpis.activeClients} icon={FileSignature} />
+        <StatCard label="Pipeline" value={formatCurrency(kpis.pipelineValue)} icon={DollarSign} />
       </section>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Priority donut */}
         <Card className="p-5 lg:col-span-1">
           <h2 className="text-sm font-semibold">Tickets por prioridad</h2>
           <PriorityDonut data={priorityBreakdown} />
@@ -60,17 +79,16 @@ export default function AdminDashboard() {
           </ul>
         </Card>
 
-        {/* Recent activity */}
         <Card className="p-5 lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-semibold">Actividades recientes</h2>
+            <h2 className="text-sm font-semibold">Actividad reciente</h2>
             <Link href="/admin/tickets" className="text-xs font-medium text-primary">
               Ver todas
             </Link>
           </div>
           <ul className="space-y-1">
-            {recentActivity.map((a) => {
-              const Icon = activityIcon[a.type]
+            {notifs.slice(0, 6).map((a) => {
+              const Icon = (activityIcon as any)[a.type] ?? Ticket
               return (
                 <li key={a.id} className="flex items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-muted/50">
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
@@ -78,7 +96,7 @@ export default function AdminDashboard() {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium">{a.title}</p>
-                    <p className="text-xs text-muted-foreground">{a.meta}</p>
+                    <p className="text-xs text-muted-foreground">{a.body}</p>
                   </div>
                   <span className="text-xs text-muted-foreground">{a.time}</span>
                 </li>
@@ -88,7 +106,6 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Technicians */}
       <Card className="p-5">
         <h2 className="mb-4 text-sm font-semibold">Técnicos más activos</h2>
         <div className="overflow-x-auto">

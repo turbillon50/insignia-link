@@ -13,6 +13,22 @@ const steps = ["Equipos", "Servicios", "Resumen"]
 export default function CotizadorPage() {
   const [step] = useState(0)
   const [lines, setLines] = useState(seed.map((l) => ({ ...l })))
+  const [clientName, setClientName] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [folio, setFolio] = useState<string | null>(null)
+
+  async function generar() {
+    if (lines.length === 0) return
+    setSaving(true)
+    const res = await fetch("/api/quotes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clientName, lines }),
+    })
+    const data = await res.json().catch(() => ({}))
+    setSaving(false)
+    if (data?.ok) setFolio(data.id)
+  }
 
   const updateQty = (id: string, delta: number) =>
     setLines((p) => p.map((l) => (l.id === id ? { ...l, qty: Math.max(1, l.qty + delta) } : l)))
@@ -98,9 +114,26 @@ export default function CotizadorPage() {
           </div>
         </Card>
 
-        <Button size="lg" className="h-12 w-full text-base">
-          <FileText className="h-5 w-5" /> Generar cotización
-        </Button>
+        <input
+          value={clientName}
+          onChange={(e) => setClientName(e.target.value)}
+          placeholder="Cliente (opcional)"
+          className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm"
+        />
+
+        {folio ? (
+          <Card className="border-success/40 bg-success/10 p-4 text-center">
+            <p className="text-sm font-semibold text-success">Cotización {folio} generada</p>
+            <p className="mt-1 text-xs text-muted-foreground">Total {formatCurrency(total)} · guardada en el sistema</p>
+            <Button variant="outline" className="mt-3 w-full" onClick={() => setFolio(null)}>
+              Nueva cotización
+            </Button>
+          </Card>
+        ) : (
+          <Button size="lg" className="h-12 w-full text-base" onClick={generar} disabled={saving}>
+            <FileText className="h-5 w-5" /> {saving ? "Generando…" : "Generar cotización"}
+          </Button>
+        )}
       </div>
     </StandaloneMobileFrame>
   )
