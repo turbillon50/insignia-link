@@ -48,6 +48,9 @@ export function LandingFooter() {
                 <Phone className="h-4 w-4 text-primary" /> +52 998 717 5692
               </li>
               <li className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-primary" /> +52 221 889 1890
+              </li>
+              <li className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-primary" /> contacto@insignialink.com
               </li>
               <li className="flex items-center gap-2">
